@@ -17,7 +17,10 @@ A simple and responsive Todo application built using Django and Bootstrap 5.
 * Task validation to prevent empty submissions
 
 ## Screenshots
-
+![Home Page](screenshots/admin_dashboard.png)
+![Home Page](screenshots/home.png)
+![Home Page](screenshots/pending_completed_tasks.png)
+![Home Page](screenshots/update_task.png)
 ### Pending Tasks
 
 * View all active tasks
