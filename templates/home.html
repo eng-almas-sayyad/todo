@@ -1,0 +1,366 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo App</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .page-title {
+            font-weight: 600;
+            color: #343a40;
+        }
+
+        .todo-container {
+            min-height: 75vh;
+        }
+
+        .task-panel {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            height: 100%;
+        }
+
+        .task-list {
+            max-height: 55vh;
+            overflow-y: auto;
+        }
+
+        .task-item {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #fff;
+        }
+
+        .completed-task {
+            background-color: #f8fff9;
+            border-left: 4px solid #198754;
+        }
+
+        .add-task-section {
+            position: sticky;
+            bottom: 0;
+            background: #fff;
+            padding-top: 15px;
+        }
+
+        .task-text {
+            font-size: 15px;
+            margin-bottom: 0;
+        }
+
+        .text-xs {
+            font-size: 0.8rem;
+        }
+
+        .section-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container py-4">
+        <div class="text-center mb-4">
+            <h2 class="page-title">My Todo App</h2>
+            <p class="text-muted mb-0">Manage your tasks efficiently</p>
+        </div>
+
+        <div class="row g-4 todo-container">
+
+            <!-- Pending Tasks -->
+            <div class="col-md-7">
+                <div class="task-panel d-flex flex-column h-100">
+
+                    <h5 class="section-title">Pending Tasks <span class="text-warning">({{task_count}})</span></h5>
+                    <form method="GET" class="mb-3">
+                        <div class="input-group">
+                            <input type="text" name="search" class="form-control" placeholder="Search tasks..."
+                                value="{{ search_query }}">
+                            <button class="btn btn-outline-primary" type="submit">
+                                <i class="fa fa-search"></i>
+                            </button>
+
+                            {% if search_query %}
+                            <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+                                Clear
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                    <div class="task-list flex-grow-1">
+
+                        <!-- Sample Task -->
+                        {% for task in tasks %}
+                        <div class="task-item d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1 d-flex align-items-center gap-2">
+                                <span class="fst-italic rounded-1 text-xs text-primary">
+                                    {{ task.create_at|date:"H:i:s" }}
+                                </span>
+                                <p class="task-text mb-0">{{ task.task }}</p>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <form action="{% url 'markCompleted' %}" method="POST">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="task_id" value="{{ task.pk }}">
+                                    <button type="submit" class="btn btn-success btn-sm rounded-3">
+                                        <i class="fa-solid fa-check"></i>
+                                    </button>
+                                </form>
+
+                                <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#editTaskModal" data-task-id="{{ task.id }}"
+                                    data-task-name="{{ task.task }}">
+                                    <i class="fa fa-edit text-white"></i>
+                                </button>
+
+                                <a href="{% url 'deleteTask' task.pk %}" class="btn btn-danger btn-sm rounded-3">
+                                    <i class="fa-solid fa-trash"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor%}
+
+                        {% if not tasks.object_list %}
+                        <div
+                            class="task-item completed-task d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+
+                            <div class="flex-grow-1">
+                                {% if search_query %}
+                                <span>No record found.</span>
+                                {% else %}
+                                <span>No Pending Tasks Hurray!!</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Pagination Start -->
+                    {% if tasks.has_other_pages %}
+                    <nav aria-label="Task pagination">
+                        <ul class="pagination justify-content-end mt-3">
+
+                            {% if tasks.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                    href="?page={{ tasks.previous_page_number }}&search={{ search_query }}&completed_page={{ completed_tasks.number }}&completed_search={{ search_completed_query }}">
+                                    Previous
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for num in tasks.paginator.page_range %}
+                            {% if tasks.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > tasks.number|add:'-3' and num < tasks.number|add:'3' %} <li class="page-item">
+                                <a class="page-link"
+                                    href="?page={{ num }}&search={{ search_query }}&completed_page={{completed_tasks.number}}&search_completed={{search_completed_query}}">
+                                    {{ num }}
+                                </a>
+                                </li>
+                                {% endif %}
+                                {% endfor %}
+
+                                {% if tasks.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                        href="?page={{ tasks.next_page_number }}&search={{ search_query }}&completed_page={{completed_tasks.number}}&search_completed={{search_completed_query}}">
+                                        Next
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    <!-- Pagination Ends -->
+                    <!-- Add Todo Section -->
+                    <form action="{% url 'addTask' %}" method="POST">
+                        {% csrf_token %}
+                        <div class="add-task-section mt-3">
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Enter new task..." name="task"
+                                    required>
+                                <button type="submit" class="btn btn-primary">
+                                    Add Task
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Completed Tasks -->
+            <div class="col-md-5">
+                <div class="task-panel">
+
+                    <h5 class="section-title text-success">
+                        Completed Tasks <span class="text-success">({{complete_task_count}})</span>
+                    </h5>
+                    <form method="GET" class="mb-3">
+                        <div class="input-group">
+                            <input type="text" name="search_completed" class="form-control"
+                                placeholder="Search tasks..." value="{{ search_completed_query }}">
+                            <button class="btn btn-outline-primary" type="submit">
+                                <i class="fa fa-search"></i>
+                            </button>
+
+                            {% if search_completed_query %}
+                            <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+                                Clear
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                    <div class="task-list">
+                        {% for task in completed_tasks %}
+                        <div
+                            class="task-item completed-task d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                            <span class="fst-italic rounded-1 text-xs text-primary p-2">
+                                {{ task.create_at|date:"H:i:s" }}
+                            </span>
+                            <div class="flex-grow-1">
+                                <span class="text-decoration-line-through">{{ task.task }}</span>
+                            </div>
+
+                            <div class="d-flex gap-2 ms-3">
+                                <a href="{% url 'restoreTask' task.pk %}"
+                                    class="btn btn-outline-warning btn-sm rounded-3">
+                                    <i class="fa-solid fa-rotate-left"></i>
+                                </a>
+
+                                <a href="{% url 'deleteTask' task.pk %}" class="btn btn-outline-danger btn-sm">
+                                    <i class="fa-solid fa-trash"></i>
+                                </a>
+                            </div>
+
+                        </div>
+                        {% endfor %}
+                        {% if not completed_tasks %}
+                        <div
+                            class="task-item completed-task d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+
+                            <div class="flex-grow-1">
+                                <span>No Task Completed Yet!!</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <!-- Pagination Start -->
+                    {% if completed_tasks.has_other_pages %}
+                    <nav aria-label="Task pagination">
+                        <ul class="pagination justify-content-end mt-3">
+
+                            {% if completed_tasks.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                    href="?page={{tasks.number }}&search={{ search_query }}&completed_page={{ completed_tasks.previous_page_number }}&completed_search={{ search_completed_query }}">
+                                    Previous
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for cnum in completed_tasks.paginator.page_range %}
+                            {% if completed_tasks.number == cnum %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ cnum }}</span>
+                            </li>
+                            {% elif cnum > completed_tasks.number|add:'-3' and cnum < completed_tasks.number|add:'3' %}
+                                <li class="page-item">
+                                <a class="page-link"
+                                    href="?page={{ tasks.number }}&search={{ search_query }}&completed_page={{cnum}}&search_completed={{search_completed_query}}">
+                                    {{ cnum }}
+                                </a>
+                                </li>
+                                {% endif %}
+                                {% endfor %}
+
+                                {% if completed_tasks.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                        href="?page={{ tasks.number }}&search={{ search_query }}&completed_page={{completed_tasks.next_page_number}}&search_completed={{search_completed_query}}">
+                                        Next
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    <!-- Pagination Ends -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div class="modal fade" id="editTaskModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <form action="{% url 'editTask' %}" method="POST">
+                    {% csrf_token %}
+
+                    <input type="hidden" name="task_id" id="task_id">
+
+                    <div class="modal-body">
+                        <input type="text" class="form-control" name="task" id="task_name">
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="submit" class="btn btn-primary">
+                            Save Changes
+                        </button>
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const editModal = document.getElementById('editTaskModal');
+
+        editModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+
+            const taskId = button.getAttribute('data-task-id');
+            const taskName = button.getAttribute('data-task-name');
+
+            document.getElementById('task_id').value = taskId;
+            document.getElementById('task_name').value = taskName;
+        });
+    </script>
+
+</body>
+
+</html>
